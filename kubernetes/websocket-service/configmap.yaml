@@ -1,0 +1,94 @@
+# kubernetes/websocket-service/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: websocket-service-config
+data:
+  SERVER_ADDR: ":8082"
+  KAFKA_BROKERS: "kafka:9092"
+  KAFKA_CONSUMER_TOPIC: "messages"
+  KAFKA_PRODUCER_TOPIC: "messages"
+  KAFKA_GROUP_ID: "websocket-service"
+  AUTH_SERVICE_URL: "http://auth-service:8081"
+  LOG_LEVEL: "info"
+---
+# kubernetes/websocket-service/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: websocket-service-secret
+type: Opaque
+data:
+  JWT_SECRET: YmFzZTY0X2VuY29kZWRfc2VjcmV0X2tleV9oZXJl # base64 encoded "your-secret-key"
+---
+# kubernetes/websocket-service/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: websocket-service
+  template:
+    metadata:
+      labels:
+        app: websocket-service
+    spec:
+      containers:
+        - name: websocket-service
+          image: yourusername/messaging-app-websocket-service:latest
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef:
+                name: websocket-service-config
+            - secretRef:
+                name: websocket-service-secret
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8082
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+# kubernetes/websocket-service/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: websocket-service
+spec:
+  selector:
+    app: websocket-service
+  ports:
+    - port: 8082
+      targetPort: 8082
+  type: ClusterIP
+---
+# kubernetes/websocket-service/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: websocket-service-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: "websocket-service"
+spec:
+  rules:
+    - host: ws.messaging.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: websocket-service
+                port:
+                  number: 8082

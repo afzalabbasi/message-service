@@ -1,0 +1,68 @@
+# kubernetes/auth-service/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+data:
+  SERVER_ADDR: ":8081"
+  POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/messaging?sslmode=disable"
+  LOG_LEVEL: "info"
+---
+# kubernetes/auth-service/secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-service-secret
+type: Opaque
+data:
+  JWT_SECRET: YmFzZTY0X2VuY29kZWRfc2VjcmV0X2tleV9oZXJl # base64 encoded "your-secret-key"
+---
+# kubernetes/auth-service/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: yourusername/messaging-app-auth-service:latest
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef:
+                name: auth-service-config
+            - secretRef:
+                name: auth-service-secret
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+# kubernetes/auth-service/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - port: 8081
+      targetPort: 8081
+  type: ClusterIP
+  </antArtifact

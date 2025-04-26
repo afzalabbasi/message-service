@@ -1,0 +1,37 @@
+# kubernetes/persistence-service/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: persistence-service-config
+data:
+  KAFKA_BROKERS: "kafka:9092"
+  KAFKA_TOPIC: "messages"
+  KAFKA_GROUP_ID: "persistence-service"
+  POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/messaging?sslmode=disable"
+  LOG_LEVEL: "info"
+---
+# kubernetes/persistence-service/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: persistence-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: persistence-service
+  template:
+    metadata:
+      labels:
+        app: persistence-service
+    spec:
+      containers:
+        - name: persistence-service
+          image: yourusername/messaging-app-persistence-service:latest
+          envFrom:
+            - configMapRef:
+                name: persistence-service-config
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
