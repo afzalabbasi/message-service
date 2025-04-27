@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	models "github.com/afzalabbasi/message-service/auth-service/internal/model"
 	"github.com/afzalabbasi/message-service/auth-service/internal/service"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 
 	"github.com/go-chi/chi/v5/middleware"
